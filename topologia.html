@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Желілік топологиялар | Info__ubt Интерактивті Симуляторы</title>
+    <!-- Google Fonts: Syne & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        /* 21dev Cyberpunk Color Palette & System */
+        :root {
+            --bg-deep: #020204;
+            --bg-base: #060609;
+            --bg-elevated: rgba(10, 10, 16, 0.7);
+            --surface: rgba(255, 255, 255, 0.04);
+            --surface-hover: rgba(255, 255, 255, 0.08);
+
+            /* Laser & Neon Colors */
+            --accent: #9B51E0; /* Cyber Purple */
+            --accent-cyan: #00F2FE; /* Cyber Cyan */
+            --accent-pink: #FF2E93; /* Laser Pink */
+            --accent-glow: rgba(155, 81, 224, 0.35);
+            --accent-cyan-glow: rgba(0, 242, 254, 0.35);
+
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+
+            --foreground: #F1F1F5;
+            --foreground-muted: #7A7A90;
+            --border: rgba(255, 255, 255, 0.07);
+            --border-highlight: rgba(155, 81, 224, 0.25);
+
+            --radius: 16px;
+            --radius-sm: 8px;
+            --font-sans: 'Outfit', sans-serif;
+            --font-display: 'Syne', sans-serif;
+            --easing: cubic-bezier(0.16, 1, 0.3, 1);
+            --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: var(--bg-deep);
+            color: var(--foreground);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        /* Cyber grid background layer */
+        .cyber-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -2;
+            pointer-events: none;
+        }
+        .cyber-grid::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle 600px at 50% 50%, rgba(6, 6, 9, 0) 20%, var(--bg-deep) 90%);
+        }
+        /* Scanline effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                    rgba(18, 16, 16, 0) 50%,
+                    rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                    90deg,
+                    rgba(255, 0, 0, 0.03),
+                    rgba(0, 255, 0, 0.01),
+                    rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        /* Ambient blur blobs */
+        .ambient-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+        .blob-1 {
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, var(--accent) 0%, rgba(155, 81, 224, 0) 70%);
+            top: -20vh;
+            left: -10vw;
+            animation: float-blob-1 25s infinite alternate ease-in-out;
+        }
+        .blob-2 {
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, var(--accent-cyan) 0%, rgba(0, 242, 254, 0) 70%);
+            bottom: -10vh;
+            right: -10vw;
+            animation: float-blob-2 20s infinite alternate ease-in-out;
+        }
+        @keyframes float-blob-1 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(8vw, 8vh) scale(1.1); }
+        }
+        @keyframes float-blob-2 {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-5vw, -8vh) scale(0.95); }
+        }
+        /* Audio protection overlay */
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-deep);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        .intro-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .intro-content {
+            max-width: 650px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: rgba(6, 6, 9, 0.8);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(155, 81, 224, 0.15);
+        }
+        .channel-tag {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 0.15rem;
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent) 50%, var(--accent-pink) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        }
+        .intro-title {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            letter-spacing: 0.05rem;
+            text-transform: uppercase;
+        }
+        .intro-desc {
+            color: var(--foreground-muted);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            outline: none;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-cyber {
+            background: linear-gradient(135deg, var(--accent) 0%, #6830a6 100%);
+            color: white;
+            box-shadow: 0 0 20px var(--accent-glow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-cyber:hover {
+            box-shadow: 0 0 30px rgba(155, 81, 224, 0.6);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--foreground);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: var(--border-highlight);
+            color: var(--accent-cyan);
+        }
+        .btn-laser {
+            background: linear-gradient(135deg, var(--accent-pink) 0%, #b80c5d 100%);
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 46, 147, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-laser:hover {
+            box-shadow: 0 0 30px rgba(255, 46, 147, 0.5);
+            transform: translateY(-2px);
+        }
+        /* App Layout */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 4%;
+            background: rgba(2, 2, 4, 0.8);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            z-index: 20;
+            position: sticky;
+            top: 0;
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: 0.1rem;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand-badge {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            color: var(--accent-cyan);
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            letter-spacing: 0.05rem;
+        }
+        .app-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 24px;
+            padding: 24px 4%;
+            flex-grow: 1;
+            align-items: start;
+        }
+        /* Panels */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .glass-card {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        }
+        /* Controls card styling */
+        .controls-card {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .controls-title {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            letter-spacing: 0.05rem;
+            border-left: 3px solid var(--accent);
+            padding-left: 10px;
+        }
+        .topology-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .btn-topol {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--foreground-muted);
+            font-family: var(--font-sans);
+            font-weight: 500;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-topol:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border-color: var(--border-highlight);
+        }
+        .btn-topol.active {
+            background: rgba(155, 81, 224, 0.12);
+            border-color: var(--accent);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(155, 81, 224, 0.15);
+            font-weight: 700;
+        }
+        .action-row {
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+        .action-row .btn {
+            flex-grow: 1;
+        }
+        /* Sliders */
+        .audio-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .slider-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.85rem;
+            color: var(--foreground-muted);
+        }
+        .slider-item label {
+            width: 100px;
+        }
+        .slider-item input[type="range"] {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.08);
+            outline: none;
+        }
+        .slider-item input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .slider-item input[type="range"]::-webkit-slider-thumb:hover {
+            box-shadow: 0 0 8px var(--accent-cyan);
+            background: white;
+        }
+        /* Theory section tabs */
+        .theory-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .theory-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--foreground-muted);
+            font-family: var(--font-sans);
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            color: white;
+        }
+        .tab-btn.active {
+            color: var(--accent-cyan);
+            background: rgba(0, 242, 254, 0.05);
+            border: 1px solid rgba(0, 242, 254, 0.15);
+        }
+        .theory-body {
+            min-height: 180px;
+        }
+        .theory-pane {
+            display: none;
+            animation: pane-fade 0.4s var(--easing) forwards;
+        }
+        .theory-pane.active {
+            display: block;
+        }
+        @keyframes pane-fade {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pane-title {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+            color: white;
+        }
+        .pane-desc {
+            font-size: 0.9rem;
+            color: var(--foreground-muted);
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+        .pros-box, .cons-box {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+        }
+        .pros-box h4 { color: var(--success); margin-bottom: 6px; }
+        .cons-box h4 { color: var(--accent-pink); margin-bottom: 6px; }
+
+        .pros-box ul, .cons-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .pros-box li::before { content: '✓ '; color: var(--success); }
+        .cons-box li::before { content: '✗ '; color: var(--accent-pink); }
+        .pros-box li, .cons-box li {
+            margin-bottom: 4px;
+            color: var(--foreground-muted);
+        }
+        /* Right Panel: Simulator Canvas */
+        .canvas-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .simulator-viewport {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            background: #020204;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        #simulator-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        /* Terminal Logs style */
+        .terminal-log {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--success);
+            min-height: 60px;
+            max-height: 80px;
+            overflow-y: auto;
+            border-left: 3px solid var(--success);
+        }
+        /* Quiz Styles */
+        .quiz-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .quiz-title {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+        }
+        .quiz-score {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .quiz-score span {
+            color: var(--accent-cyan);
+        }
+        .quiz-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .quiz-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent-cyan) 100%);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .quiz-body {
+            min-height: 180px;
+        }
+        .q-text {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .opt-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--foreground);
+            font-family: var(--font-sans);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            text-align: left;
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+        }
+        .opt-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--border-highlight);
+            transform: translateX(4px);
+        }
+        .opt-btn.correct {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: var(--success) !important;
+            color: #a7f3d0;
+        }
+        .opt-btn.incorrect {
+            background: rgba(239, 68, 68, 0.12) !important;
+            border-color: var(--error) !important;
+            color: #fca5a5;
+            animation: shake 0.4s ease;
+        }
+        .opt-btn.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .opt-btn.disabled.correct, .opt-btn.disabled.incorrect {
+            opacity: 1;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .quiz-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+        /* Footer */
+        .app-footer {
+            border-top: 1px solid var(--border);
+            padding: 20px 4%;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--foreground-muted);
+            margin-top: auto;
+            background: rgba(2, 2, 4, 0.9);
+        }
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+        @media (max-width: 600px) {
+            .action-row {
+                flex-direction: column;
+            }
+            .topology-buttons {
+                grid-template-columns: 1fr;
+            }
+            .pros-cons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Scanlines & Grids -->
+<div class="cyber-grid"></div>
+<div class="scanlines"></div>
+<!-- Ambient Blobs -->
+<div class="ambient-blob blob-1"></div>
+<div class="ambient-blob blob-2"></div>
+<!-- Audio Consent overlay -->
+<div id="intro-overlay" class="intro-overlay">
+    <div class="intro-content">
+        <div class="channel-tag">INFO__UBT</div>
+        <h1 class="intro-title">Желілік топологиялар симуляторы</h1>
+        <p class="intro-desc">ҰБТ Информатика пәніне арналған толық интерактивті желілерді бағыттау, деректер тасымалы мен коллизияны сипаттайтын визуалды платформа.</p>
+        <button id="enter-btn" class="btn btn-cyber">
+            <span>Жүйені жүктеу (Дыбысты қосу)</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-power"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></svg>
+        </button>
+    </div>
+</div>
+<!-- Header -->
+<header class="app-header">
+    <div class="header-brand">
+        <span class="brand-logo">INFO__UBT</span>
+        <span class="brand-badge">ЖЕЛІЛЕР</span>
+    </div>
+    <div class="slider-item" style="gap: 16px;">
+        <button id="mute-btn" style="background:none; border:none; color:white; cursor:pointer; display:flex; align-items:center;">
+            <svg id="vol-on" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            <svg id="vol-off" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-x hidden"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>
+        </button>
+    </div>
+</header>
+<!-- Main Container -->
+<main class="app-layout">
+    <!-- Left Panel: Simulator Controls & Theory -->
+    <section class="panel left-panel">
+        <!-- Controls Card -->
+        <div class="glass-card controls-card">
+            <h3 class="controls-title">Басқару панелі</h3>
+
+            <div class="topology-buttons">
+                <button class="btn-topol active" data-topol="bus">Шина (Bus)</button>
+                <button class="btn-topol" data-topol="ring">Сақина (Ring)</button>
+                <button class="btn-topol" data-topol="star">Жұлдыз (Star)</button>
+                <button class="btn-topol" data-topol="mesh">Торлы (Mesh)</button>
+                <button class="btn-topol" data-topol="tree">Ағаш (Tree)</button>
+            </div>
+            <!-- Web Audio Controls & Settings -->
+            <div class="audio-settings">
+                <div class="slider-item">
+                    <label for="speed-range">Деректер жылдамдығы:</label>
+                    <input type="range" id="speed-range" min="1" max="4" value="2" step="0.5">
+                </div>
+                <div class="slider-item">
+                    <label for="synth-pitch">Симулятор реңкі:</label>
+                    <input type="range" id="synth-pitch" min="60" max="220" value="95">
+                </div>
+            </div>
+            <div class="action-row">
+                <button id="send-data-btn" class="btn btn-cyber">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <span>Деректерді жіберу</span>
+                </button>
+                <button id="collision-btn" class="btn btn-laser">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>Коллизия симуляциялау</span>
+                </button>
+            </div>
+        </div>
+        <!-- Theory Card -->
+        <div class="glass-card theory-card">
+            <h3 class="controls-title">Теориялық мәліметтер</h3>
+
+            <div class="theory-tabs">
+                <button class="tab-btn active" data-tab="theory-bus">Шина</button>
+                <button class="tab-btn" data-tab="theory-ring">Сақина</button>
+                <button class="tab-btn" data-tab="theory-star">Жұлдыз</button>
+                <button class="tab-btn" data-tab="theory-mesh">Торлы</button>
+                <button class="tab-btn" data-tab="theory-tree">Ағаш</button>
+            </div>
+            <div class="theory-body">
+                <!-- Bus -->
+                <div id="theory-bus" class="theory-pane active">
+                    <h4 class="pane-title">Шина (Bus) топологиясы</h4>
+                    <p class="pane-desc">Барлық жұмыс станциялары ортақ коаксиалды кабельге тізбектеліп қосылады. Кабельдің екі ұшына да сигналдың шағылысуын болдырмау үшін <strong>терминаторлар</strong> орнатылады.</p>
+                    <div class="pros-cons">
+                        <div class="pros-box">
+                            <h4>Артықшылығы</h4>
+                            <ul>
+                                <li>Оңай орнатылады</li>
+                                <li>Кабельді аз жұмсайды</li>
+                            </ul>
+                        </div>
+                        <div class="cons-box">
+                            <h4>Кемшілігі</h4>
+                            <ul>
+                                <li>Кабель үзілсе бүкіл желі тоқтайды</li>
+                                <li>Деректер коллизиясы жиілейді</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- Ring -->
+                <div id="theory-ring" class="theory-pane">
+                    <h4 class="pane-title">Сақина (Ring) топологиясы</h4>
+                    <p class="pane-desc">Деректер сақина бойымен бір бағытта компьютерден компьютерге шеңбер түрінде тасымалданады. Әр компьютер ретранслятор рөлін атқарады.</p>
+                    <div class="pros-cons">
+                        <div class="pros-box">
+                            <h4>Артықшылығы</h4>
+                            <ul>
+                                <li>Кабельді аз жұмсайды</li>
+                                <li>Коллизия мүлдем болмайды</li>
+                            </ul>
+                        </div>
+                        <div class="cons-box">
+                            <h4>Кемшілігі</h4>
+                            <ul>
+                                <li>Бір компьютер бұзылса желі өшеді</li>
+                                <li>Жаңа торап қосу күрделі</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- Star -->
+                <div id="theory-star" class="theory-pane">
+                    <h4 class="pane-title">Жұлдыз (Star) топологиясы</h4>
+                    <p class="pane-desc">Әр компьютер жеке кабель арқылы орталық бағыттауыш құрылғыға (концентратор - Hub немесе коммутатор - Switch) қосылады. Ең танымал желі түрі.</p>
+                    <div class="pros-cons">
+                        <div class="pros-box">
+                            <h4>Артықшылығы</h4>
+                            <ul>
+                                <li>Жоғары сенімділік</li>
+                                <li>Ақауды іздеу оңай</li>
+                            </ul>
+                        </div>
+                        <div class="cons-box">
+                            <h4>Кемшілігі</h4>
+                            <ul>
+                                <li>Hub бұзылса желі өшеді</li>
+                                <li>Кабель шығыны көп</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- Mesh -->
+                <div id="theory-mesh" class="theory-pane">
+                    <h4 class="pane-title">Торлы (Mesh) топологиясы</h4>
+                    <p class="pane-desc">Әр компьютер бір-бірімен тікелей байланысқан. Толық байланысты желіде N(N-1)/2 кабельдік байланыс орнатылуы қажет.</p>
+                    <div class="pros-cons">
+                        <div class="pros-box">
+                            <h4>Артықшылығы</h4>
+                            <ul>
+                                <li>Ең сенімді желі</li>
+                                <li>Өткізу мүмкіндігі зор</li>
+                            </ul>
+                        </div>
+                        <div class="cons-box">
+                            <h4>Кемшілігі</h4>
+                            <ul>
+                                <li>Орнату құны тым жоғары</li>
+                                <li>Сымдар өте күрделі</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!-- Tree -->
+                <div id="theory-tree" class="theory-pane">
+                    <h4 class="pane-title">Ағаш (Tree) топологиясы</h4>
+                    <p class="pane-desc">Жұлдызша топологиясының иерархиялық дамыған түрі. Орталық бас тораптан ішкі бағыттауыштар тарайды.</p>
+                    <div class="pros-cons">
+                        <div class="pros-box">
+                            <h4>Артықшылығы</h4>
+                            <ul>
+                                <li>Желіні кеңейту оңай</li>
+                                <li>Сегменттеу икемділігі</li>
+                            </ul>
+                        </div>
+                        <div class="cons-box">
+                            <h4>Кемшілігі</h4>
+                            <ul>
+                                <li>Басты торап бұзылса бәрі өшеді</li>
+                                <li>Баптау қиындығы</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Right Panel: Interactive Canvas & Quiz -->
+    <section class="panel right-panel">
+        <!-- Canvas Viewer Card -->
+        <div class="glass-card canvas-card">
+            <h3 class="controls-title">Желілік симулятор өрісі</h3>
+            <div class="simulator-viewport">
+                <canvas id="simulator-canvas"></canvas>
+            </div>
+            <!-- Status Logs Terminal -->
+            <div id="terminal-output" class="terminal-log">
+                [INFO] Симулятор сәтті жүктелді. Жүйе дайын...
+            </div>
+        </div>
+        <!-- Quiz Card -->
+        <div class="glass-card quiz-card">
+            <div class="quiz-header">
+                <h3 class="quiz-title">ҰБТ Информатика: Желілер Квизі</h3>
+                <div class="quiz-score">Ұпай: <span id="q-score">0</span> / <span id="q-total">0</span></div>
+            </div>
+            <div class="quiz-bar">
+                <div id="q-progress" class="quiz-bar-fill"></div>
+            </div>
+            <div class="quiz-body" id="quiz-question-wrapper">
+                <!-- JS will inject questions here -->
+            </div>
+            <div class="quiz-actions">
+                <button id="next-q-btn" class="btn btn-cyber hidden" style="padding: 10px 20px;">Келесі сұрақ</button>
+            </div>
+        </div>
+    </section>
+</main>
+<!-- Footer -->
+<footer class="app-footer">
+    <p>© 2026 INFO__UBT. ҰБТ Информатика дайындық платформасы. Барлық құқықтар қорғалған.</p>
+</footer>
+<!-- GSAP for spring/elastic animations -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script>
+    // State Management
+    let audioCtx = null;
+    let masterGain = null;
+    let filterNode = null;
+    let synthOscillators = [];
+    let isMuted = false;
+    let audioInitialized = false;
+    let activeTopology = 'bus';
+    let canvas = null;
+    let ctx = null;
+    let animationFrameId = null;
+    // Visual nodes (computes) data
+    let nodes = [];
+    let centralHub = null; // used in Star and Tree
+    let dataPackets = [];
+    let collisionEvent = null; // store current collision status
+    // Quiz Questions on Network Topologies
+    const quizQuestions = [
+        {
+            q: "Ортақ бір магистральды кабельге барлық жұмыс станциялары тізбектеліп қосылатын және кабель ұштарына терминатор бекітілетін топология?",
+            options: ["Сақина (Ring)", "Шина (Bus)", "Жұлдыз (Star)", "Торлы (Mesh)"],
+            correct: 1,
+            hint: "Бұл топологияда коаксиалды кабель қолданылады, кабель үзілсе бүкіл желі істен шығады."
+        },
+        {
+            q: "Жұлдыз (Star) топологиясының басты артықшылығы не болып табылады?",
+            options: [
+                "Кабель үнемділігі",
+                "Орталық торап бұзылса да басқа компьютерлер жұмысын жалғастырады",
+                "Коллизияның көп болуы",
+                "Жеке кабельді қажет етпеуі"
+            ],
+            correct: 1,
+            hint: "Орталық құрылғы (Switch) тек жеке зақымдалған компьютер байланысын ғана тоқтатады."
+        },
+        {
+            q: "Коаксиалды кабельдің ұштарындағы сигналдың кері бағытта шағылысуын болдырмайтын, оны өзіне сіңіріп алатын құрылғы қалай аталады?",
+            options: ["Трансивер", "Репитер", "Терминатор", "Концентратор"],
+            correct: 2,
+            hint: "Шина топологиясында кабель ұштарын тұйықтау үшін қолданылады."
+        },
+        {
+            q: "Әрбір компьютер басқа барлық жұмыс станцияларымен тікелей кабель арқылы қосылған, жоғары сенімділік беретін топология?",
+            options: ["Ағаш тәрізді (Tree)", "Сақина (Ring)", "Торлы (Mesh)", "Шина (Bus)"],
+            correct: 2,
+            hint: "N(N-1)/2 формуласы бойынша кабель саны есептелетін ең сенімді желі."
+        },
+        {
+            q: "Сақина (Ring) топологиясындағы деректер қалай тасымалданады?",
+            options: [
+                "Барлық бағытта ретсіз",
+                "Бір бағытта компьютерден компьютерге кезекпен",
+                "Тек орталық Hub арқылы",
+                "Магистраль бойымен коллизия жасай отырып"
+            ],
+            correct: 1,
+            hint: "Сигнал шеңбер бойымен бір бағытта маркер арқылы таралады."
+        }
+    ];
+    let quizScore = 0;
+    let quizIndex = 0;
+    let dnsNodes = [];
+    // AUDIO ENGINE (Web Audio API)
+    function initAudio() {
+        if (audioInitialized) return;
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContextClass();
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.Q.setValueAtTime(1.8, audioCtx.currentTime);
+            filterNode.frequency.setValueAtTime(300, audioCtx.currentTime);
+
+            filterNode.connect(masterGain);
+            masterGain.connect(audioCtx.destination);
+
+            startCyberHum();
+            startFilterModulation();
+            audioInitialized = true;
+        } catch (e) {
+            console.error("Audio API initialization error:", e);
+        }
+    }
+    function startCyberHum() {
+        const rootFreq = parseFloat(document.getElementById('synth-pitch').value) || 95;
+
+        const osc1 = audioCtx.createOscillator();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(rootFreq / 2, audioCtx.currentTime);
+
+        const osc2 = audioCtx.createOscillator();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(rootFreq * 2 + 0.3, audioCtx.currentTime);
+
+        const oscGain = audioCtx.createGain();
+        oscGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+
+        osc1.connect(oscGain);
+        osc2.connect(oscGain);
+        oscGain.connect(filterNode);
+
+        osc1.start();
+        osc2.start();
+
+        synthOscillators = [osc1, osc2];
+    }
+    function updateSynthFrequency(value) {
+        if (!audioCtx || synthOscillators.length < 2) return;
+        const rootFreq = parseFloat(value);
+        const now = audioCtx.currentTime;
+        synthOscillators[0].frequency.exponentialRampToValueAtTime(rootFreq / 2, now + 0.1);
+        synthOscillators[1].frequency.exponentialRampToValueAtTime(rootFreq * 2 + 0.3, now + 0.1);
+    }
+    function startFilterModulation() {
+        const lfo = audioCtx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.05, audioCtx.currentTime);
+
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.setValueAtTime(120, audioCtx.currentTime);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(filterNode.frequency);
+        lfo.start();
+    }
+    function playBeep(freq = 600, duration = 0.08) {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + duration + 0.01);
+    }
+    function playSuccessSound() {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+        const notes = [329.63, 415.30, 493.88, 659.25];
+
+        notes.forEach((note, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(note, now + idx * 0.06);
+            gain.gain.setValueAtTime(0.05, now + idx * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.3);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + idx * 0.06);
+            osc.stop(now + idx * 0.06 + 0.31);
+        });
+    }
+    function playErrorSound() {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(90, now);
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(92, now);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+        osc1.stop(now + 0.36);
+        osc2.stop(now + 0.36);
+    }
+    function playCollisionGlitch() {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+
+        const bufferSize = audioCtx.sampleRate * 0.35;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noiseNode = audioCtx.createBufferSource();
+        noiseNode.buffer = buffer;
+
+        const noiseFilter = audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(1000, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(120, now + 0.3);
+
+        const noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.2, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+
+        const osc = audioCtx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(30, now + 0.3);
+
+        const oscGain = audioCtx.createGain();
+        oscGain.gain.setValueAtTime(0.15, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(oscGain);
+        oscGain.connect(audioCtx.destination);
+
+        noiseNode.start();
+        osc.start();
+        noiseNode.stop(now + 0.36);
+        osc.stop(now + 0.36);
+    }
+    function playSweepSound() {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(700, now + 0.4);
+
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.41);
+    }
+    function toggleMute() {
+        if (!masterGain) return;
+        isMuted = !isMuted;
+        const volOn = document.getElementById('vol-on');
+        const volOff = document.getElementById('vol-off');
+
+        if (isMuted) {
+            masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            volOn.classList.add('hidden');
+            volOff.classList.remove('hidden');
+        } else {
+            masterGain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            volOn.classList.remove('hidden');
+            volOff.classList.add('hidden');
+        }
+    }
+    // -----------------------------------------------------------------
+    // NETWORK SIMULATOR ENGINE (Canvas + Spring Physics via GSAP)
+    // -----------------------------------------------------------------
+    function initSimulator() {
+        canvas = document.getElementById('simulator-canvas');
+        ctx = canvas.getContext('2d');
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        createNodes();
+        applyTopologyLayout('bus', false);
+
+        document.querySelectorAll('.btn-topol').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-topol').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const topol = btn.getAttribute('data-topol');
+                activeTopology = topol;
+                applyTopologyLayout(topol, true);
+
+                const tabBtn = document.querySelector(`.tab-btn[data-tab="theory-${topol}"]`);
+                if (tabBtn) tabBtn.click();
+            });
+        });
+
+        document.getElementById('send-data-btn').addEventListener('click', () => {
+            initAudio();
+            sendDataPacket();
+        });
+
+        document.getElementById('collision-btn').addEventListener('click', () => {
+            initAudio();
+            simulateCollision();
+        });
+
+        renderLoop();
+    }
+    function resizeCanvas() {
+        if (!canvas) return;
+        const rect = canvas.parentNode.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        if (nodes.length > 0) {
+            applyTopologyLayout(activeTopology, false);
+        }
+    }
+    function createNodes() {
+        nodes = [];
+        for (let i = 0; i < 6; i++) {
+            nodes.push({
+                id: i,
+                label: `PC-${i + 1}`,
+                x: 0,
+                y: 0,
+                r: 16,
+                pulse: 0,
+                glowColor: 'var(--accent-cyan)'
+            });
+        }
+        centralHub = {
+            id: 'hub',
+            label: 'Switch/Hub',
+            x: 0,
+            y: 0,
+            r: 20,
+            pulse: 0,
+            glowColor: 'var(--accent-pink)',
+            visible: false
+        };
+    }
+    function applyTopologyLayout(topology, animate = true) {
+        const w = canvas.width;
+        const h = canvas.height;
+        const duration = animate ? 1.0 : 0;
+
+        dataPackets = [];
+        collisionEvent = null;
+
+        if (animate) playSweepSound();
+
+        let targets = [];
+        let hubTarget = { x: w / 2, y: h / 2, visible: false };
+
+        logTerminal(`[INFO] Топологияға ауысу: ${topology.toUpperCase()}`);
+
+        if (topology === 'bus') {
+            const startX = w * 0.15;
+            const endX = w * 0.85;
+            const stepX = (endX - startX) / 5;
+
+            for (let i = 0; i < 6; i++) {
+                targets.push({
+                    x: startX + i * stepX,
+                    y: h * 0.5
+                });
+            }
+        }
+        else if (topology === 'ring') {
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) * 0.32;
+
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+                targets.push({
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                });
+            }
+        }
+        else if (topology === 'star') {
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) * 0.32;
+
+            hubTarget = { x: centerX, y: centerY, visible: true };
+
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+                targets.push({
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                });
+            }
+        }
+        else if (topology === 'mesh') {
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) * 0.32;
+
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 2 * Math.PI) / 6 - Math.PI / 2;
+                targets.push({
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                });
+            }
+        }
+        else if (topology === 'tree') {
+            hubTarget = { x: w / 2, y: h * 0.25, visible: true };
+
+            targets = [
+                { x: w * 0.35, y: h * 0.5 },
+                { x: w * 0.65, y: h * 0.5 },
+                { x: w * 0.2, y: h * 0.75 },
+                { x: w * 0.4, y: h * 0.75 },
+                { x: w * 0.6, y: h * 0.75 },
+                { x: w * 0.8, y: h * 0.75 }
+            ];
+        }
+
+        for (let i = 0; i < 6; i++) {
+            gsap.to(nodes[i], {
+                x: targets[i].x,
+                y: targets[i].y,
+                duration: duration,
+                ease: animate ? 'elastic.out(1, 0.75)' : 'none'
+            });
+        }
+
+        centralHub.visible = hubTarget.visible;
+        gsap.to(centralHub, {
+            x: hubTarget.x,
+            y: hubTarget.y,
+            duration: duration,
+            ease: animate ? 'elastic.out(1, 0.75)' : 'none'
+        });
+    }
+    // -----------------------------------------------------------------
+    // PACKET TRANSMISSION & COLLISION SIMULATOR
+    // -----------------------------------------------------------------
+    function sendDataPacket() {
+        if (activeTopology === 'bus') {
+            logTerminal(`[TRANSMIT] PC-1 деректер пакетін ортақ Шинаға жіберді...`);
+            createPacket(nodes[0], nodes[5], 'cyan');
+        }
+        else if (activeTopology === 'ring') {
+            logTerminal(`[TRANSMIT] Токен бойымен шеңберлі сигнал таратылды...`);
+            createRingSequencePackets();
+        }
+        else if (activeTopology === 'star') {
+            logTerminal(`[TRANSMIT] PC-1 орталық Switch-ке пакет жіберді. Switch бағыттайды...`);
+            createStarSequencePackets();
+        }
+        else if (activeTopology === 'mesh') {
+            logTerminal(`[TRANSMIT] Торлы желі: Компьютерлерге тікелей жеке байланыс арқылы тарату...`);
+            for (let i = 1; i < 6; i++) {
+                createPacket(nodes[0], nodes[i], 'cyan');
+            }
+        }
+        else if (activeTopology === 'tree') {
+            logTerminal(`[TRANSMIT] Ағаш топологиясы: Бас торап арқылы деректер сегменттерге тарады...`);
+            createTreeSequencePackets();
+        }
+    }
+    function createPacket(fromNode, toNode, color = 'cyan') {
+        dataPackets.push({
+            x: fromNode.x,
+            y: fromNode.y,
+            startX: fromNode.x,
+            startY: fromNode.y,
+            endX: toNode.x,
+            endY: toNode.y,
+            progress: 0,
+            color: color === 'cyan' ? 'var(--accent-cyan)' : 'var(--accent-pink)',
+            speed: 0.007 * parseFloat(document.getElementById('speed-range').value),
+            fromNode: fromNode,
+            toNode: toNode,
+            id: Math.random()
+        });
+    }
+    function createRingSequencePackets() {
+        let idx = 0;
+        function triggerNextRingHop() {
+            if (activeTopology !== 'ring') return;
+            const nextIdx = (idx + 1) % 6;
+            const p = {
+                x: nodes[idx].x,
+                y: nodes[idx].y,
+                startX: nodes[idx].x,
+                startY: nodes[idx].y,
+                endX: nodes[nextIdx].x,
+                endY: nodes[nextIdx].y,
+                progress: 0,
+                color: 'var(--accent-cyan)',
+                speed: 0.015 * parseFloat(document.getElementById('speed-range').value),
+                fromNode: nodes[idx],
+                toNode: nodes[nextIdx],
+                onComplete: () => {
+                    triggerNodePulse(nodes[nextIdx]);
+                    playBeep(400 + nextIdx * 100, 0.06);
+                    idx = nextIdx;
+                    if (idx !== 0) {
+                        triggerNextRingHop();
+                    } else {
+                        logTerminal(`[INFO] Сақина бойымен тарату сәтті аяқталды.`);
+                    }
+                }
+            };
+            dataPackets.push(p);
+        }
+        triggerNextRingHop();
+    }
+    function createStarSequencePackets() {
+        const p = {
+            x: nodes[0].x,
+            y: nodes[0].y,
+            startX: nodes[0].x,
+            startY: nodes[0].y,
+            endX: centralHub.x,
+            endY: centralHub.y,
+            progress: 0,
+            color: 'var(--accent-cyan)',
+            speed: 0.02 * parseFloat(document.getElementById('speed-range').value),
+            fromNode: nodes[0],
+            toNode: centralHub,
+            onComplete: () => {
+                triggerNodePulse(centralHub);
+                playBeep(500, 0.08);
+
+                for (let i = 1; i < 6; i++) {
+                    dataPackets.push({
+                        x: centralHub.x,
+                        y: centralHub.y,
+                        startX: centralHub.x,
+                        startY: centralHub.y,
+                        endX: nodes[i].x,
+                        endY: nodes[i].y,
+                        progress: 0,
+                        color: 'var(--accent-cyan)',
+                        speed: 0.015 * parseFloat(document.getElementById('speed-range').value),
+                        fromNode: centralHub,
+                        toNode: nodes[i],
+                        onComplete: () => {
+                            triggerNodePulse(nodes[i]);
+                            playBeep(700 + i * 50, 0.06);
+                            if (i === 5) logTerminal(`[INFO] Switch орталық құрылғысы деректерді таратты.`);
+                        }
+                    });
+                }
+            }
+        };
+        dataPackets.push(p);
+    }
+    function createTreeSequencePackets() {
+        const p = {
+            x: nodes[2].x,
+            y: nodes[2].y,
+            startX: nodes[2].x,
+            startY: nodes[2].y,
+            endX: nodes[0].x,
+            endY: nodes[0].y,
+            progress: 0,
+            color: 'var(--accent-cyan)',
+            speed: 0.02,
+            fromNode: nodes[2],
+            toNode: nodes[0],
+            onComplete: () => {
+                triggerNodePulse(nodes[0]);
+                playBeep(450, 0.08);
+
+                dataPackets.push({
+                    x: nodes[0].x,
+                    y: nodes[0].y,
+                    startX: nodes[0].x,
+                    startY: nodes[0].y,
+                    endX: centralHub.x,
+                    endY: centralHub.y,
+                    progress: 0,
+                    color: 'var(--accent-cyan)',
+                    speed: 0.02,
+                    fromNode: nodes[0],
+                    toNode: centralHub,
+                    onComplete: () => {
+                        triggerNodePulse(centralHub);
+                        playBeep(600, 0.1);
+
+                        dataPackets.push({
+                            x: centralHub.x,
+                            y: centralHub.y,
+                            startX: centralHub.x,
+                            startY: centralHub.y,
+                            endX: nodes[1].x,
+                            endY: nodes[1].y,
+                            progress: 0,
+                            color: 'var(--accent-cyan)',
+                            speed: 0.02,
+                            fromNode: centralHub,
+                            toNode: nodes[1],
+                            onComplete: () => {
+                                triggerNodePulse(nodes[1]);
+                                playBeep(500, 0.08);
+
+                                [4, 5].forEach(idx => {
+                                    dataPackets.push({
+                                        x: nodes[1].x,
+                                        y: nodes[1].y,
+                                        startX: nodes[1].x,
+                                        startY: nodes[1].y,
+                                        endX: nodes[idx].x,
+                                        endY: nodes[idx].y,
+                                        progress: 0,
+                                        color: 'var(--accent-cyan)',
+                                        speed: 0.02,
+                                        fromNode: nodes[1],
+                                        toNode: nodes[idx],
+                                        onComplete: () => {
+                                            triggerNodePulse(nodes[idx]);
+                                            playBeep(700 + idx * 40, 0.06);
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        };
+        dataPackets.push(p);
+    }
+    function simulateCollision() {
+        if (activeTopology !== 'bus') {
+            logTerminal(`[WARNING] Коллизия тек Шина (Bus) топологиясында жиі орын алады. Шинаға ауысыңыз!`);
+            document.querySelector('.btn-topol[data-topol="bus"]').click();
+            setTimeout(simulateCollision, 1100);
+            return;
+        }
+
+        logTerminal(`[TRANSMIT] PC-1 және PC-6 бір сәтте шина бойымен пакеттер жіберді...`);
+
+        const pLeft = {
+            x: nodes[0].x,
+            y: nodes[0].y,
+            startX: nodes[0].x,
+            startY: nodes[0].y,
+            endX: nodes[5].x,
+            endY: nodes[5].y,
+            progress: 0,
+            color: 'var(--accent-cyan)',
+            speed: 0.005,
+            fromNode: nodes[0],
+            toNode: nodes[5],
+            id: 'left'
+        };
+
+        const pRight = {
+            x: nodes[5].x,
+            y: nodes[5].y,
+            startX: nodes[5].x,
+            startY: nodes[5].y,
+            endX: nodes[0].x,
+            endY: nodes[0].y,
+            progress: 0,
+            color: 'var(--accent-pink)',
+            speed: 0.005,
+            fromNode: nodes[5],
+            toNode: nodes[0],
+            id: 'right'
+        };
+
+        dataPackets = [pLeft, pRight];
+    }
+    function triggerNodePulse(node) {
+        node.pulse = 1.0;
+        gsap.to(node, { pulse: 0, duration: 0.5 });
+    }
+    function logTerminal(msg) {
+        const term = document.getElementById('terminal-output');
+        term.innerHTML += `<br>${msg}`;
+        term.scrollTop = term.scrollHeight;
+    }
+    // -----------------------------------------------------------------
+    // RENDER LOOP & CANVAS DRAWING
+    // -----------------------------------------------------------------
+    function renderLoop() {
+        if (ctx) {
+            draw();
+        }
+        animationFrameId = requestAnimationFrame(renderLoop);
+    }
+    function draw() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        drawLinks();
+        updateAndDrawPackets();
+        drawNodes();
+        drawCollisionEffect();
+    }
+    function drawLinks() {
+        ctx.lineWidth = 2.0;
+        ctx.shadowBlur = 0;
+
+        if (activeTopology === 'bus') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.beginPath();
+            ctx.moveTo(nodes[0].x, nodes[0].y + 40);
+            ctx.lineTo(nodes[5].x, nodes[5].y + 40);
+            ctx.stroke();
+
+            ctx.fillStyle = 'var(--accent-pink)';
+            ctx.fillRect(nodes[0].x - 10, nodes[0].y + 35, 4, 10);
+            ctx.fillRect(nodes[5].x + 6, nodes[5].y + 35, 4, 10);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.moveTo(node.x, node.y);
+                ctx.lineTo(node.x, node.y + 40);
+                ctx.stroke();
+            });
+        }
+        else if (activeTopology === 'ring') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.beginPath();
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            for (let i = 1; i < 6; i++) {
+                ctx.lineTo(nodes[i].x, nodes[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+        else if (activeTopology === 'star') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.moveTo(centralHub.x, centralHub.y);
+                ctx.lineTo(node.x, node.y);
+                ctx.stroke();
+            });
+        }
+        else if (activeTopology === 'mesh') {
+            ctx.strokeStyle = 'rgba(155, 81, 224, 0.04)';
+            for (let i = 0; i < 6; i++) {
+                for (let j = i + 1; j < 6; j++) {
+                    ctx.beginPath();
+                    ctx.moveTo(nodes[i].x, nodes[i].y);
+                    ctx.lineTo(nodes[j].x, nodes[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        else if (activeTopology === 'tree') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.beginPath();
+            ctx.moveTo(centralHub.x, centralHub.y);
+            ctx.lineTo(nodes[0].x, nodes[0].y);
+            ctx.moveTo(centralHub.x, centralHub.y);
+            ctx.lineTo(nodes[1].x, nodes[1].y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            ctx.lineTo(nodes[2].x, nodes[2].y);
+            ctx.moveTo(nodes[0].x, nodes[0].y);
+            ctx.lineTo(nodes[3].x, nodes[3].y);
+
+            ctx.moveTo(nodes[1].x, nodes[1].y);
+            ctx.lineTo(nodes[4].x, nodes[4].y);
+            ctx.moveTo(nodes[1].x, nodes[1].y);
+            ctx.lineTo(nodes[5].x, nodes[5].y);
+            ctx.stroke();
+        }
+    }
+    function updateAndDrawPackets() {
+        if (collisionEvent) return;
+
+        for (let i = dataPackets.length - 1; i >= 0; i--) {
+            const p = dataPackets[i];
+            p.progress += p.speed;
+
+            if (p.progress >= 1.0) {
+                p.progress = 1.0;
+                if (p.onComplete) {
+                    p.onComplete();
+                } else {
+                    triggerNodePulse(p.toNode);
+                    playBeep(600, 0.05);
+                    logTerminal(`[SUCCESS] Деректер жетті: ${p.toNode.label}`);
+                }
+                dataPackets.splice(i, 1);
+                continue;
+            }
+
+            if (activeTopology === 'bus') {
+                const trunkY = p.startY + 40;
+
+                if (p.progress < 0.25) {
+                    const t = p.progress / 0.25;
+                    p.x = p.startX;
+                    p.y = p.startY + 40 * t;
+                } else if (p.progress < 0.75) {
+                    const t = (p.progress - 0.25) / 0.5;
+                    p.x = p.startX + (p.endX - p.startX) * t;
+                    p.y = trunkY;
+                } else {
+                    const t = (p.progress - 0.75) / 0.25;
+                    p.x = p.endX;
+                    p.y = trunkY - 40 * t;
+                }
+            } else {
+                p.x = p.startX + (p.endX - p.startX) * p.progress;
+                p.y = p.startY + (p.endY - p.startY) * p.progress;
+            }
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        if (activeTopology === 'bus' && dataPackets.length === 2) {
+            const dist = Math.abs(dataPackets[0].x - dataPackets[1].x);
+            if (dist < 15 && Math.abs(dataPackets[0].y - dataPackets[1].y) < 5) {
+                triggerCollisionEvent(dataPackets[0].x, dataPackets[0].y);
+            }
+        }
+    }
+    function triggerCollisionEvent(x, y) {
+        playCollisionGlitch();
+        logTerminal(`<span style="color:var(--accent-pink)">[COLLISION] Коллизия анықталды! Екі пакет соқтығысып, желі бұзылды! (CSMA/CD хаттамасы іске қосылады)</span>`);
+
+        const particles = [];
+        for (let i = 0; i < 25; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = 2 + Math.random() * 4;
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                alpha: 1.0,
+                size: 2 + Math.random() * 3
+            });
+        }
+
+        collisionEvent = {
+            x: x,
+            y: y,
+            particles: particles,
+            flash: 1.0,
+            duration: 60
+        };
+
+        dataPackets = [];
+    }
+    function drawCollisionEffect() {
+        if (!collisionEvent) return;
+
+        if (collisionEvent.flash > 0) {
+            ctx.beginPath();
+            ctx.arc(collisionEvent.x, collisionEvent.y, 25 * collisionEvent.flash, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 46, 147, ${0.4 * collisionEvent.flash})`;
+            ctx.fill();
+            collisionEvent.flash -= 0.05;
+        }
+
+        collisionEvent.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.02;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 46, 147, ${p.alpha})`;
+            ctx.shadowColor = 'var(--accent-pink)';
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = 'var(--accent-pink)';
+        ctx.textAlign = 'center';
+        ctx.fillText('COLLISION WARNING', collisionEvent.x, collisionEvent.y - 15);
+
+        collisionEvent.duration--;
+        if (collisionEvent.duration <= 0) {
+            collisionEvent = null;
+        }
+    }
+    function drawNodes() {
+        if (centralHub.visible) {
+            ctx.beginPath();
+            ctx.arc(centralHub.x, centralHub.y, centralHub.r + centralHub.pulse * 15, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 46, 147, ${0.15 * centralHub.pulse})`;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(centralHub.x, centralHub.y, centralHub.r, 0, Math.PI * 2);
+            ctx.fillStyle = '#06060c';
+            ctx.strokeStyle = centralHub.pulse > 0 ? 'var(--accent-pink)' : 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 3;
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = 'bold 10px Outfit, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText('HUB', centralHub.x, centralHub.y + 4);
+        }
+
+        nodes.forEach(node => {
+            if (node.pulse > 0) {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, node.r + node.pulse * 12, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(0, 242, 254, ${0.15 * node.pulse})`;
+                ctx.fill();
+            }
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+            ctx.fillStyle = '#050508';
+            ctx.strokeStyle = node.pulse > 0 ? 'var(--accent-cyan)' : 'var(--accent)';
+            ctx.lineWidth = 2.5;
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = '11px Outfit, sans-serif';
+            ctx.fillStyle = node.pulse > 0 ? 'white' : 'var(--foreground-muted)';
+            ctx.textAlign = 'center';
+            ctx.fillText(node.label, node.x, node.y - node.r - 8);
+        });
+    }
+    // -----------------------------------------------------------------
+    // TABS & THEORY INTERACTION
+    // -----------------------------------------------------------------
+    function initTheoryTabs() {
+        const tabs = document.querySelectorAll('.tab-btn');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.theory-pane').forEach(p => p.classList.remove('active'));
+
+                tab.classList.add('active');
+                const targetPane = document.getElementById(tab.getAttribute('data-tab'));
+                targetPane.classList.add('active');
+
+                const topol = tab.getAttribute('data-tab').replace('theory-', '');
+
+                if (activeTopology !== topol) {
+                    const topolBtn = document.querySelector(`.btn-topol[data-topol="${topol}"]`);
+                    if (topolBtn) topolBtn.click();
+                }
+
+                playClickSound();
+            });
+        });
+    }
+    // -----------------------------------------------------------------
+    // ҰБТ QUIZ CHALLENGE
+    // -----------------------------------------------------------------
+    function initQuiz() {
+        renderQuizQuestion();
+        document.getElementById('next-q-btn').addEventListener('click', () => {
+            playClickSound();
+            quizIndex++;
+            if (quizIndex < quizQuestions.length) {
+                renderQuizQuestion();
+            } else {
+                showQuizResults();
+            }
+        });
+    }
+    function renderQuizQuestion() {
+        const qData = quizQuestions[quizIndex];
+        const container = document.getElementById('quiz-question-wrapper');
+        const totalVal = document.getElementById('q-total');
+        const progress = document.getElementById('q-progress');
+        const nextBtn = document.getElementById('next-q-btn');
+
+        nextBtn.classList.add('hidden');
+        totalVal.innerText = quizQuestions.length;
+        progress.style.width = `${(quizIndex / quizQuestions.length) * 100}%`;
+
+        container.innerHTML = `
+                <div class="q-text">${quizIndex + 1}. ${qData.q}</div>
+                <div class="options-list">
+                    ${qData.options.map((opt, idx) => `
+                        <button class="opt-btn" data-idx="${idx}">${opt}</button>
+                    `).join('')}
+                </div>
+                <p id="quiz-hint" style="font-size: 0.8rem; color: var(--accent-cyan); margin-top: 14px; opacity: 0; transition: opacity 0.5s ease;">
+                    Көмек: ${qData.hint}
+                </p>
+            `;
+
+        const btns = container.querySelectorAll('.opt-btn');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const selectedIdx = parseInt(btn.getAttribute('data-idx'));
+                handleOptionSelect(selectedIdx, btn, btns);
+            });
+        });
+    }
+    function handleOptionSelect(idx, selectedBtn, allBtns) {
+        const qData = quizQuestions[quizIndex];
+        const correctIdx = qData.correct;
+        const nextBtn = document.getElementById('next-q-btn');
+
+        allBtns.forEach(btn => {
+            btn.classList.add('disabled');
+            const btnIdx = parseInt(btn.getAttribute('data-idx'));
+            if (btnIdx === correctIdx) {
+                btn.classList.add('correct');
+            }
+        });
+
+        if (idx === correctIdx) {
+            selectedBtn.classList.add('correct');
+            quizScore++;
+            document.getElementById('q-score').innerText = quizScore;
+            playSuccessSound();
+        } else {
+            selectedBtn.classList.add('incorrect');
+            const hint = document.getElementById('quiz-hint');
+            if (hint) hint.style.opacity = 1;
+            playErrorSound();
+        }
+
+        nextBtn.classList.remove('hidden');
+    }
+    function showQuizResults() {
+        const container = document.getElementById('quiz-question-wrapper');
+        const progress = document.getElementById('q-progress');
+        progress.style.width = '100%';
+
+        let verdict = '';
+        if (quizScore === quizQuestions.length) {
+            verdict = "Керемет! ҰБТ топология сұрақтарын 100% бағындырдыңыз! 🏆";
+        } else if (quizScore >= 3) {
+            verdict = "Жақсы көрсеткіш! Аздап қайталау қажет. 👍";
+        } else {
+            verdict = "Қайта тапсырып көріңіз. Басқару тақтасындағы теорияны оқыңыз. 📚";
+        }
+
+        container.innerHTML = `
+                <div style="text-align:center; padding: 20px 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trophy" style="color:var(--accent-cyan); margin-bottom: 12px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34"/><path d="M12 2a6 6 0 0 0-6 6v5a6 6 0 0 0 12 0V8a6 6 0 0 0-6-6z"/></svg>
+                    <h3 class="pane-title" style="font-size: 1.4rem;">Сынақ аяқталды!</h3>
+                    <p style="font-size: 1.15rem; color: var(--accent-cyan); margin-bottom: 6px;">Ұпайыңыз: ${quizScore} / ${quizQuestions.length}</p>
+                    <p class="pane-desc">${verdict}</p>
+                    <button id="restart-q-btn" class="btn btn-outline" style="margin-top: 10px;">Қайта тапсыру</button>
+                </div>
+            `;
+
+        document.getElementById('restart-q-btn').addEventListener('click', () => {
+            playClickSound();
+            quizScore = 0;
+            quizIndex = 0;
+            document.getElementById('q-score').innerText = '0';
+            renderQuizQuestion();
+        });
+    }
+    function playClickSound() {
+        playBeep(800, 0.05);
+    }
+    // -----------------------------------------------------------------
+    // GLOBAL APP INITIALIZATION
+    // -----------------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+        const enterBtn = document.getElementById('enter-btn');
+        const overlay = document.getElementById('intro-overlay');
+
+        enterBtn.addEventListener('click', () => {
+            initAudio();
+            if (audioCtx) playSuccessSound();
+
+            gsap.to(overlay, {
+                opacity: 0,
+                duration: 0.8,
+                ease: 'power2.out',
+                onComplete: () => {
+                    overlay.classList.add('hidden');
+
+                    initSimulator();
+                    initTheoryTabs();
+                    initQuiz();
+
+                    gsap.from('.app-header', { y: -50, opacity: 0, duration: 0.8, ease: 'power3.out' });
+                    gsap.from('.left-panel', { x: -80, opacity: 0, duration: 0.8, ease: 'power3.out' });
+                    gsap.from('.right-panel', { x: 80, opacity: 0, duration: 0.8, ease: 'power3.out' });
+                }
+            });
+        });
+
+        document.getElementById('mute-btn').addEventListener('click', () => {
+            toggleMute();
+        });
+
+        document.getElementById('synth-pitch').addEventListener('input', (e) => {
+            updateSynthFrequency(e.target.value);
+        });
+    });
+</script>
+</body>
+</html>
